@@ -4,13 +4,18 @@
   "description": "",
   "main": "index.js",
   "scripts": {
-    "start": "node index.js"
+    "start": "bun run index.ts"
   },
   "keywords": [],
   "author": "",
+  "type": "module",
   "license": "MIT",
   "dependencies": {
-    "discord.js": "^12.5.3",
-    "dotenv": "^8.2.0"
+    "@discordjs/builders": "^1.8.2",
+    "@discordjs/rest": "^2.3.0",
+    "discord-api-types": "^0.37.93",
+    "discord.js": "^14.15.3",
+    "dotenv": "^16.4.5",
+    "zod": "^3.23.8"
   }
 }

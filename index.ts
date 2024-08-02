@@ -1,17 +1,48 @@
-require("dotenv").config();
+import "dotenv/config";
+import { SlashCommandBuilder } from "@discordjs/builders";
+import { Client, Events, GatewayIntentBits } from "discord.js";
+import { REST, Routes } from "discord.js";
+import { z } from "zod";
 
-const Discord = require("discord.js");
+const ENVIRONMENT_SCHEMA = z.object({
+  TOKEN: z.string(),
+  CLIENT_ID: z.string(),
+});
 
-const client = new Discord.Client();
+const { TOKEN, CLIENT_ID } = ENVIRONMENT_SCHEMA.parse(process.env);
+
+const commands = [
+  new SlashCommandBuilder()
+    .setName("ping")
+    .setDescription("Replies with pong!"),
+].map((command) => command.toJSON());
+
+console.log(commands);
+
+const rest = new REST({ version: "10" }).setToken(TOKEN);
+
+try {
+  console.log("Started refreshing application (/) commands.");
+
+  await rest.put(Routes.applicationCommands(CLIENT_ID), {
+    body: commands,
+  });
+
+  console.log("Successfully reloaded application (/) commands.");
+} catch (error) {
+  console.error(error);
+}
+
+const client = new Client({ intents: [GatewayIntentBits.Guilds] });
 
 client.on("ready", () => {
-  console.log(`logged in as ${client.user.tag}`);
+  console.log(`logged in as ${client.user?.tag}`);
 });
 
 const floppaStates = new Map();
 
 async function cleanFloppas({ sent }) {
-  const cleans = [];
+  const cleans: Promise<void>[] = [];
   for (const floppa of sent) {
     async function clean() {
       await (await floppa).delete();
@@ -67,11 +98,11 @@ async function sendFloppas() {
       let foppaPromise;
       if (type === "cop") {
         foppaPromise = channel.send(
-          "https://media.discordapp.net/attachments/277305426041896960/834192638303141928/image0.jpg"
+          "https://media.discordapp.net/attachments/277305426041896960/834192638303141928/image0.jpg",
         );
       } else {
         foppaPromise = channel.send(
-          floppaLinks[Math.floor(Math.random() * floppaLinks.length)]
+          floppaLinks[Math.floor(Math.random() * floppaLinks.length)],
         );
       }
       batch.push(foppaPromise);
@@ -82,15 +113,23 @@ async function sendFloppas() {
   await Promise.all(channelBatches);
 }
 
+client.on(Events.InteractionCreate, (interaction) => {
+  if (!interaction.isChatInputCommand()) {
+    return;
+  }
+
+  console.log(interaction);
+});
+
 async function delay(ms) {
   return await new Promise((resolve) => setTimeout(resolve, ms));
 }
 
 async function main() {
-  await client.login(process.env.TOKEN);
-  while (true) {
-    await Promise.all([sendFloppas(), delay(1000)]);
-  }
+  await client.login(TOKEN);
+  // while (true) {
+  //   await Promise.all([sendFloppas(), delay(1000)]);
+  // }
 }
 
 main();
