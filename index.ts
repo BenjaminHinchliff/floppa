@@ -1,47 +1,31 @@
 import "dotenv/config";
-import { SlashCommandBuilder } from "@discordjs/builders";
-import { Client, Events, GatewayIntentBits } from "discord.js";
-import { REST, Routes } from "discord.js";
-import { z } from "zod";
+import {
+  Client,
+  Events,
+  GatewayIntentBits,
+  Message,
+  TextChannel,
+} from "discord.js";
 
-const ENVIRONMENT_SCHEMA = z.object({
-  TOKEN: z.string(),
-  CLIENT_ID: z.string(),
+const client = new Client({
+  intents: [
+    GatewayIntentBits.Guilds,
+    GatewayIntentBits.GuildMessages,
+    GatewayIntentBits.MessageContent,
+  ],
 });
-
-const { TOKEN, CLIENT_ID } = ENVIRONMENT_SCHEMA.parse(process.env);
-
-const commands = [
-  new SlashCommandBuilder()
-    .setName("ping")
-    .setDescription("Replies with pong!"),
-].map((command) => command.toJSON());
-
-console.log(commands);
-
-const rest = new REST({ version: "10" }).setToken(TOKEN);
-
-try {
-  console.log("Started refreshing application (/) commands.");
-
-  await rest.put(Routes.applicationCommands(CLIENT_ID), {
-    body: commands,
-  });
-
-  console.log("Successfully reloaded application (/) commands.");
-} catch (error) {
-  console.error(error);
-}
-
-const client = new Client({ intents: [GatewayIntentBits.Guilds] });
 
 client.on("ready", () => {
   console.log(`logged in as ${client.user?.tag}`);
 });
 
-const floppaStates = new Map();
+interface FloppaState {
+  type: string;
+  sent: Promise<Message>[];
+}
+const floppaStates: Map<string, FloppaState> = new Map();
 
-async function cleanFloppas({ sent }) {
+async function cleanFloppas({ sent }: FloppaState) {
   const cleans: Promise<void>[] = [];
   for (const floppa of sent) {
     async function clean() {
@@ -52,7 +36,7 @@ async function cleanFloppas({ sent }) {
   await Promise.all(cleans);
 }
 
-client.on("message", async (msg) => {
+client.on(Events.MessageCreate, async (msg) => {
   if (msg.content === "FLOPPA COP!") {
     if (!floppaStates.has(msg.channel.id)) {
       floppaStates.set(msg.channel.id, {
@@ -69,6 +53,10 @@ client.on("message", async (msg) => {
     }
   } else if (msg.content === "FLOPPA STOP!") {
     const state = floppaStates.get(msg.channel.id);
+    if (!state) {
+      console.error("Asked to stop in channel where floppa wasn't started?");
+      return;
+    }
     floppaStates.delete(msg.channel.id);
     if (state.type !== "cop") {
       await cleanFloppas(state);
@@ -89,13 +77,17 @@ const floppaLinks = [
 ];
 
 async function sendFloppas() {
-  const channelBatches = [];
+  const channelBatches: Promise<Message[]>[] = [];
   for (const [id, { type, sent }] of floppaStates) {
-    const channel = await client.channels.fetch(id, true);
+    const channel = client.channels.cache.get(id);
+    if (!channel || !(channel instanceof TextChannel)) {
+      console.error("Failed to fetch channels for client");
+      return;
+    }
 
-    const batch = [];
+    const batch: Promise<Message>[] = [];
     for (let i = 0; i < 5; ++i) {
-      let foppaPromise;
+      let foppaPromise: Promise<Message>;
       if (type === "cop") {
         foppaPromise = channel.send(
           "https://media.discordapp.net/attachments/277305426041896960/834192638303141928/image0.jpg",
@@ -113,23 +105,15 @@ async function sendFloppas() {
   await Promise.all(channelBatches);
 }
 
-client.on(Events.InteractionCreate, (interaction) => {
-  if (!interaction.isChatInputCommand()) {
-    return;
-  }
-
-  console.log(interaction);
-});
-
-async function delay(ms) {
+async function delay(ms: number) {
   return await new Promise((resolve) => setTimeout(resolve, ms));
 }
 
 async function main() {
-  await client.login(TOKEN);
-  // while (true) {
-  //   await Promise.all([sendFloppas(), delay(1000)]);
-  // }
+  await client.login(process.env.TOKEN);
+  while (true) {
+    await Promise.all([sendFloppas(), delay(1000)]);
+  }
 }
 
 main();

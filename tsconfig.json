@@ -1,0 +1,22 @@
+{
+    "compilerOptions": {
+        "target": "ESNext",
+        "module": "ESNext",
+        "allowImportingTsExtensions": true,
+        "emitDeclarationOnly": true,
+        "declaration": true,
+        "strict": true,
+        "esModuleInterop": true,                  // Enables emit interoperability between CommonJS and ES Modules via the `__importStar` and `__importDefault` helpers
+        "skipLibCheck": true,                     // Skip type checking of declaration files
+        "moduleResolution": "Node",
+        "forceConsistentCasingInFileNames": true, // Disallow inconsistently-cased references to the same file
+        "resolveJsonModule": true                 // Include modules imported with .json extension
+      },
+      "include": ["**/*.ts"],                    // Include files in the src folder
+      "exclude": ["node_modules", "dist"],         // Exclude node_modules and dist folders
+      "ts-node": {
+        "esm": true,
+        "compiler": "typescript",
+        "experimentalSpecifierResolution": "node"
+        }
+}
